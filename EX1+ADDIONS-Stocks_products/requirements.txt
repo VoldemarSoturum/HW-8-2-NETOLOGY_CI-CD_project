@@ -1,4 +1,9 @@
-django
-djangorestframework
-psycopg2-binary
+asgiref
+Django
 django-filter
+djangorestframework
+gunicorn
+packaging
+psycopg2-binary
+python-dotenv
+sqlparse

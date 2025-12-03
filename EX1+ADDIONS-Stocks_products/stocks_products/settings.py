@@ -11,7 +11,10 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
-
+import os
+from dotenv import load_dotenv
+# Загружаем переменные окружения
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,13 +23,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-nw^y+m^wmxza1asgk+)!ua2qx9)g+#v=6%76-9i8i(6eqiw94j'
+#SECRET_KEY = 'django-insecure-nw^y+m^wmxza1asgk+)!ua2qx9)g+#v=6%76-9i8i(6eqiw94j'
+
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Для Gunicorn устанавливаем в False
+#DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = []
+#Задаём параметры для Gunicorn ['ip-нашего сервера', 'localhost', '127.0.0.1']
 
+#ALLOWED_HOSTS = ['91.229.11.227', 'localhost', '127.0.0.1']
+
+allowed_hosts = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = [host.strip() for host in allowed_hosts.split(',')]
 
 # Application definition
 
@@ -37,7 +48,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
+    
+   'django_filters',
     'rest_framework',
 
     'logistic',
@@ -77,17 +89,27 @@ WSGI_APPLICATION = 'stocks_products.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.postgresql',
+#        'NAME': 'netology_stocks_products',
+#        'USER': 'netology_stocks',
+#        'PASSWORD': '666stocks_pas666',
+#        'HOST': '127.0.0.1',
+#        'PORT': '5432',
+#    }
+#}
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'netology_stocks_products',
-        'USER': 'netology_stocks',
-        'PASSWORD': 'netology_stocks',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
+        'NAME': os.getenv('DB_NAME', 'netology_stocks_products'),
+        'USER': os.getenv('DB_USER', 'netology_stocks'),
+        'PASSWORD': os.getenv('DB_PASSWORD', '666stocks_pas666'),
+        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
@@ -125,7 +147,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
-STATIC_URL = '/static/'
+#STATIC_URL = '/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
@@ -144,4 +166,19 @@ REST_FRAMEWORK = {
     ],
 }
 
-# =====================
+# ===================== Настройки сбора статики для CSS JS и т.п.===============
+
+
+import os
+
+
+# Базовая директория проекта
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Настройки статических файлов
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Настройки медиа файлов (если нужны)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

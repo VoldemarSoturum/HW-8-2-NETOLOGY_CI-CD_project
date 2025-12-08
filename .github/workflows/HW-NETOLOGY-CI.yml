@@ -1,0 +1,139 @@
+name: Django CI
+
+on:
+  push:
+  pull_request:
+
+# Общие переменные окружения для всех джобов
+env:
+  SECRET_KEY: "fake-ci-secret-key"
+  DEBUG: "False"
+  ALLOWED_HOSTS: "localhost,127.0.0.1"
+
+  DB_NAME: "stocks_test_db"
+  DB_USER: "stocks_user"
+  DB_PASSWORD: "stocks_password"
+  DB_HOST: "127.0.0.1"
+  DB_PORT: "5432"
+
+jobs:
+  # ---------------- LINT: flake8 / black / mypy ----------------
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"   # Django 3.2 комфортно живёт с 3.10
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8 black mypy
+
+      - name: Run black (check)
+        run: |
+          black --check .
+
+      - name: Run flake8
+        run: |
+          flake8 .
+
+      - name: Run mypy
+        run: |
+          mypy . --ignore-missing-imports
+
+  # ---------------- TESTS: Django + PostgreSQL ----------------
+  tests:
+    runs-on: ubuntu-latest
+
+    # поднимаем PostgreSQL как сервис для тестов
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: stocks_test_db
+          POSTGRES_USER: stocks_user
+          POSTGRES_PASSWORD: stocks_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U stocks_user -d stocks_test_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run migrations
+        run: |
+          python manage.py migrate --noinput
+
+      - name: Run tests
+        run: |
+          python manage.py test
+
+  # ---------------- GUNICORN: проверка запуска ----------------
+  gunicorn_check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies + gunicorn
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install gunicorn
+
+      - name: Check gunicorn can load Django app
+        run: |
+          # Загружаем WSGI-приложение и проверяем конфиг gunicorn
+          gunicorn stocks_products.wsgi:application --check-config
+
+  # ---------------- NGINX: проверка конфигурации ----------------
+  nginx_check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install nginx
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
+
+      - name: Check nginx config (if present)
+        run: |
+          # Предполагаем, что конфиг лежит в deploy/nginx/nginx.conf
+          # Если файла нет — просто пропускаем проверку, чтобы не падать.
+          if [ -f deploy/nginx/nginx.conf ]; then
+            echo "Found deploy/nginx/nginx.conf, running nginx -t..."
+            sudo nginx -t -c "$PWD/deploy/nginx/nginx.conf"
+          else
+            echo "No nginx config at deploy/nginx/nginx.conf, skipping nginx check."
+          fi

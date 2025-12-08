@@ -28,13 +28,13 @@ jobs:
           POSTGRES_USER: postgres      # Имя пользователя
           POSTGRES_PASSWORD: postgres  # Пароль
           POSTGRES_DB: test_db         # Имя базы данных
-        # Опции запуска контейнера
+        
         options: >-
-          --health-cmd pg_isready      # Команда проверки здоровья
-          --health-interval 10s        # Проверять каждые 10 секунд
-          --health-timeout 5s          # Таймаут 5 секунд
-          --health-retries 5           # Попыток перед failure
-        # Проброс портов: хост:контейнер
+          --health-cmd pg_isready      
+          --health-interval 10s        
+          --health-timeout 5s          
+          --health-retries 5           
+       
         ports:
           - 5432:5432  # Локальный 5432 → контейнер 5432
     

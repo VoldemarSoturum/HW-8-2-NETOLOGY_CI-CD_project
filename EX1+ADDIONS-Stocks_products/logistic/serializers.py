@@ -2,6 +2,8 @@ from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from typing import Union
+
 
 from .models import Product, Stock, StockProduct
 
@@ -29,9 +31,22 @@ class StockSerializer(serializers.ModelSerializer):
 
     # ---------- helpers ----------
 
-    def _resolve_product(self, value: object) -> Product:
+    # def _resolve_product(self, value: object) -> Product:
+    #    """
+    #     Принимает либо экземпляр Product, либо его id.
+    #    Возвращает Product или бросает ValidationError.
+    #     """
+    #     if isinstance(value, Product):
+    #         return value
+    #     try:
+    #         return Product.objects.get(pk=int(value))
+    #     except (TypeError, ValueError, ObjectDoesNotExist):
+    #         raise ValidationError({"product": f"Invalid product id: {value}"})
+
+    # ---------- helpers ----------
+    def _resolve_product(self, value: Union[int, str, Product]) -> Product:
         """
-        Принимает либо экземпляр Product, либо его id.
+        Принимает либо экземпляр Product, либо его id (int/str).
         Возвращает Product или бросает ValidationError.
         """
         if isinstance(value, Product):

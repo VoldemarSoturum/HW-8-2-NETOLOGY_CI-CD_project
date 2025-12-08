@@ -14,10 +14,9 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          DB_NAME: netology_stocks_products
-          DB_USER: netology_stocks
-          DB_PASSWORD: netology_stocks  # но лучше через secrets
-          DB_HOST: localhost
+          POSTGRES_DB: netology_stocks_products
+          POSTGRES_USER: netology_stocks
+          POSTGRES_PASSWORD: netology_stocks
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -26,11 +25,7 @@ jobs:
         ports:
           - 5432:5432
     
-    env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-      SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key-for-ci' }}
-      DEBUG: 'True'
-      ALLOWED_HOSTS: 'localhost,127.0.0.1'
+    # УБРАТЬ env: отсюда! Или оставить только SECRET_KEY
     
     steps:
     - name: Checkout code
@@ -54,27 +49,54 @@ jobs:
     
     - name: Wait for PostgreSQL to be ready
       run: |
-        for i in {1..10}; do
-          if pg_isready -h localhost -p 5432; then
-            echo "PostgreSQL is ready!"
+        for i in {1..30}; do
+          if pg_isready -h localhost -p 5432 -U netology_stocks; then
+            echo "✅ PostgreSQL is ready!"
             break
           fi
-          echo "Waiting for PostgreSQL... ($i/10)"
+          echo "⏳ Waiting for PostgreSQL... ($i/30)"
           sleep 2
         done
     
     - name: Run database migrations
+      env:  # Переменные ТОЛЬКО для этого шага
+        DB_NAME: netology_stocks_products
+        DB_USER: netology_stocks
+        DB_PASSWORD: netology_stocks
+        DB_HOST: localhost
+        DB_PORT: 5432
+        SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key-for-ci' }}
+        DEBUG: 'True'
+        ALLOWED_HOSTS: 'localhost,127.0.0.1'
       run: |
         cd EX1+ADDIONS-Stocks_products
         python manage.py makemigrations --check --dry-run
         python manage.py migrate
     
     - name: Collect static files
+      env:  # Переменные ТОЛЬКО для этого шага
+        DB_NAME: netology_stocks_products
+        DB_USER: netology_stocks
+        DB_PASSWORD: netology_stocks
+        DB_HOST: localhost
+        DB_PORT: 5432
+        SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key-for-ci' }}
+        DEBUG: 'True'
+        ALLOWED_HOSTS: 'localhost,127.0.0.1'
       run: |
         cd EX1+ADDIONS-Stocks_products
         python manage.py collectstatic --noinput --clear
     
     - name: Run Django tests
+      env:  # Переменные ТОЛЬКО для этого шага
+        DB_NAME: netology_stocks_products
+        DB_USER: netology_stocks
+        DB_PASSWORD: netology_stocks
+        DB_HOST: localhost
+        DB_PORT: 5432
+        SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key-for-ci' }}
+        DEBUG: 'True'
+        ALLOWED_HOSTS: 'localhost,127.0.0.1'
       run: |
         cd EX1+ADDIONS-Stocks_products
         python manage.py test --verbosity=2

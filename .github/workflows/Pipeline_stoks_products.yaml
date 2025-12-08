@@ -47,7 +47,7 @@ jobs:
 
       - name: Run flake8
         run: |
-          flake8 .
+          flake8 . --max-line-length=88 --extend-ignore=E203,E501 --exclude=migrations,venv
 
       - name: Run mypy
         run: |

@@ -14,9 +14,11 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
+          DB_NAME: netology_stocks_products
+          DB_USER: netology_stocks
+          DB_PASSWORD: netology_stocks  # но лучше через secrets
+          DB_HOST: localhost
+          DB_PORT: 5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s

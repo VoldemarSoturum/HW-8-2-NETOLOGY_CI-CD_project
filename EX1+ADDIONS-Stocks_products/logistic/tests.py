@@ -165,7 +165,7 @@ class StockAPITests(APITestCase):
         )
 
     def test_filter_stocks_by_product_and_response_contains_only_that_product(self):
-        sid = self._create_stock()
+        self._create_stock()
 
         # Фильтруем списком: ?products=<id>
         res = self.client.get(self.stock_list_url, {"products": self.p2.id})

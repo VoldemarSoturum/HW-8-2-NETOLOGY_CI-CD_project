@@ -1,0 +1,79 @@
+name: Django CI/CD
+
+on:
+  push:
+    branches: [ develop, main, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+      SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key-for-ci' }}
+      DEBUG: 'True'
+      ALLOWED_HOSTS: 'localhost,127.0.0.1'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install system dependencies for psycopg2
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libpq-dev gcc python3-dev
+    
+    - name: Install Python dependencies
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Wait for PostgreSQL to be ready
+      run: |
+        sleep 5
+        pg_isready -h localhost -p 5432
+    
+    - name: Run database migrations
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        python manage.py makemigrations --check --dry-run
+        python manage.py migrate
+    
+    - name: Collect static files
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        python manage.py collectstatic --noinput --clear
+    
+    - name: Run Django tests
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        python manage.py test --verbosity=2
+    
+    - name: Lint with flake8
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        pip install flake8
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics

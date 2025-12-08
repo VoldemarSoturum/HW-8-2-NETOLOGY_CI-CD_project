@@ -1,0 +1,107 @@
+name: Django CI/CD
+
+on:
+  push:
+    branches: [ develop, main, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: netology_stocks_products
+          POSTGRES_USER: netology_stocks
+          POSTGRES_PASSWORD: 666stocks_pas666
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install system dependencies for psycopg2
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libpq-dev gcc python3-dev
+    
+    - name: Install Python dependencies
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Wait for PostgreSQL to be ready
+      run: |
+        for i in {1..30}; do
+          if pg_isready -h localhost -p 5432 -U netology_stocks; then
+            echo "PostgreSQL is ready"
+            break
+          fi
+          echo "Waiting for PostgreSQL... ($i/30)"
+          sleep 2
+        done
+    
+    - name: Run database migrations
+      env:
+        DB_NAME: netology_stocks_products
+        DB_USER: netology_stocks
+        DB_PASSWORD: 666stocks_pas666
+        DB_HOST: localhost
+        DB_PORT: 5432
+        SECRET_KEY: django-insecure-test-key-for-ci
+        DEBUG: 'True'
+        ALLOWED_HOSTS: 'localhost,127.0.0.1'
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        python manage.py makemigrations --check --dry-run
+        python manage.py migrate
+    
+    - name: Collect static files
+      env:
+        DB_NAME: netology_stocks_products
+        DB_USER: netology_stocks
+        DB_PASSWORD: 666stocks_pas666
+        DB_HOST: localhost
+        DB_PORT: 5432
+        SECRET_KEY: django-insecure-test-key-for-ci
+        DEBUG: 'True'
+        ALLOWED_HOSTS: 'localhost,127.0.0.1'
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        python manage.py collectstatic --noinput --clear
+    
+    - name: Run Django tests
+      env:
+        DB_NAME: netology_stocks_products
+        DB_USER: netology_stocks
+        DB_PASSWORD: 666stocks_pas666
+        DB_HOST: localhost
+        DB_PORT: 5432
+        SECRET_KEY: django-insecure-test-key-for-ci
+        DEBUG: 'True'
+        ALLOWED_HOSTS: 'localhost,127.0.0.1'
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        python manage.py test --verbosity=2
+    
+    - name: Lint with flake8
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        pip install flake8
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics

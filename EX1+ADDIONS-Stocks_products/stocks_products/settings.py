@@ -17,8 +17,6 @@ from dotenv import load_dotenv
 load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
@@ -167,10 +165,6 @@ REST_FRAMEWORK = {
 }
 
 # ===================== Настройки сбора статики для CSS JS и т.п.===============
-
-# Базовая директория проекта
-BASE_DIR = Path(__file__).resolve().parent.parent
-
 # Настройки статических файлов
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -178,4 +172,5 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Настройки медиа файлов (если нужны)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 

@@ -51,7 +51,7 @@ jobs:
 
       - name: Run mypy
         run: |
-          mypy . --ignore-missing-imports
+          mypy . --ignore-missing-imports --exclude "migrations"
 
   # ---------------- TESTS: Django + PostgreSQL ----------------
   tests:

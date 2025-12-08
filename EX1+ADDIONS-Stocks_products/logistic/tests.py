@@ -1,8 +1,9 @@
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-#Delete Stock
-from .models import Product,StockProduct
+
+# Delete Stock
+from .models import Product, StockProduct
 
 
 class ProductAPITests(APITestCase):

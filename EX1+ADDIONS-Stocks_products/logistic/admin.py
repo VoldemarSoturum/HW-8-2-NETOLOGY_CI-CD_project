@@ -16,4 +16,5 @@ class StockAdmin(admin.ModelAdmin):
 class StockProductAdmin(admin.ModelAdmin):
     list_display = ("id", "stock", "product", "quantity", "price")
 
+
 # Register your models here.

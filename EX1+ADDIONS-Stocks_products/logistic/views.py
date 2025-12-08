@@ -8,6 +8,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     """
     Полный CRUD по товарам + поиск по названию и описанию.
     """
+
     queryset = Product.objects.all().order_by("id")
     serializer_class = ProductSerializer
     filter_backends = [filters.SearchFilter]
@@ -22,12 +23,17 @@ class StockViewSet(viewsets.ModelViewSet):
     (работает благодаря filterset_fields=['products'] и M2M Stock.products)
     Дополнительно оставим поиск по адресу и названию товара.
     """
+
     queryset = Stock.objects.all().order_by("id")
     serializer_class = StockSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
 
     # поиск складов по продукту (id)
-    filterset_fields = ["products"]        # /api/stocks/?products=1
+    filterset_fields = ["products"]  # /api/stocks/?products=1
 
     # удобный поиск
     search_fields = ["address", "products__title"]  # /api/stocks/?search=карандаш

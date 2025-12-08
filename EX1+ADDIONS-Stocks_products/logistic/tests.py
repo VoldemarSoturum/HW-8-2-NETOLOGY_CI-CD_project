@@ -14,9 +14,17 @@ class ProductAPITests(APITestCase):
 
     def setUp(self):
         # немного данных для поиска
-        self.tomato = Product.objects.create(title="Помидор черри", description="Свежие мини-помидоры для салатов")
-        self.cucumber = Product.objects.create(title="Огурец длинный", description="Хрустящий, отличный для салатов с помидорами")
-        self.basil = Product.objects.create(title="Базилик", description="Травяной аромат, сочетается с томатами (помидорами)")
+        self.tomato = Product.objects.create(
+            title="Помидор черри", description="Свежие мини-помидоры для салатов"
+        )
+        self.cucumber = Product.objects.create(
+            title="Огурец длинный",
+            description="Хрустящий, отличный для салатов с помидорами",
+        )
+        self.basil = Product.objects.create(
+            title="Базилик",
+            description="Травяной аромат, сочетается с томатами (помидорами)",
+        )
 
     def test_product_list(self):
         url = reverse("product-list")  # /api/v1/products/
@@ -39,7 +47,11 @@ class ProductAPITests(APITestCase):
         self.assertEqual(res.data["title"], "Помидор")
 
         # UPDATE (PATCH)
-        res = self.client.patch(url_detail, {"description": "Самые сочные и ароматные помидорки"}, format="json")
+        res = self.client.patch(
+            url_detail,
+            {"description": "Самые сочные и ароматные помидорки"},
+            format="json",
+        )
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertIn("ароматные", res.data["description"])
 
@@ -71,8 +83,13 @@ class StockAPITests(APITestCase):
 
     def setUp(self):
         # Продукты для позиций
-        self.p2 = Product.objects.create(title="Помидор черри", description="Свежие мини-помидоры для салатов")
-        self.p3 = Product.objects.create(title="Огурец длинный", description="Хрустящий, отличный для салатов с помидорами")
+        self.p2 = Product.objects.create(
+            title="Помидор черри", description="Свежие мини-помидоры для салатов"
+        )
+        self.p3 = Product.objects.create(
+            title="Огурец длинный",
+            description="Хрустящий, отличный для салатов с помидорами",
+        )
 
         self.stock_list_url = reverse("stock-list")  # /api/v1/stocks/
 
@@ -102,8 +119,12 @@ class StockAPITests(APITestCase):
         # Предположим, что без фильтра возвращаем все позиции:
         pos = res.data.get("positions", [])
         self.assertGreaterEqual(len(pos), 2)
-        self.assertTrue(StockProduct.objects.filter(stock_id=sid, product=self.p2).exists())
-        self.assertTrue(StockProduct.objects.filter(stock_id=sid, product=self.p3).exists())
+        self.assertTrue(
+            StockProduct.objects.filter(stock_id=sid, product=self.p2).exists()
+        )
+        self.assertTrue(
+            StockProduct.objects.filter(stock_id=sid, product=self.p3).exists()
+        )
 
     def test_update_stock_positions_upsert_and_remove_missing(self):
         sid = self._create_stock()
@@ -129,12 +150,18 @@ class StockAPITests(APITestCase):
         self.assertEqual(str(sp3.price), "145.00")
 
         # А если теперь отправим только p2 — p3 должна удалиться
-        payload2 = {"positions": [{"product": self.p2.id, "quantity": 1, "price": "10.00"}]}
+        payload2 = {
+            "positions": [{"product": self.p2.id, "quantity": 1, "price": "10.00"}]
+        }
         res2 = self.client.patch(detail_url, payload2, format="json")
         self.assertEqual(res2.status_code, status.HTTP_200_OK)
 
-        self.assertTrue(StockProduct.objects.filter(stock_id=sid, product=self.p2).exists())
-        self.assertFalse(StockProduct.objects.filter(stock_id=sid, product=self.p3).exists())
+        self.assertTrue(
+            StockProduct.objects.filter(stock_id=sid, product=self.p2).exists()
+        )
+        self.assertFalse(
+            StockProduct.objects.filter(stock_id=sid, product=self.p3).exists()
+        )
 
     def test_filter_stocks_by_product_and_response_contains_only_that_product(self):
         sid = self._create_stock()

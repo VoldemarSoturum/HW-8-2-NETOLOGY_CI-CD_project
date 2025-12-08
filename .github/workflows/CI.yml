@@ -25,8 +25,6 @@ jobs:
         ports:
           - 5432:5432
     
-    # УБРАТЬ env: отсюда! Или оставить только SECRET_KEY
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -59,44 +57,30 @@ jobs:
         done
     
     - name: Run database migrations
-      env:  # Переменные ТОЛЬКО для этого шага
-        DB_NAME: netology_stocks_products
-        DB_USER: netology_stocks
-        DB_PASSWORD: netology_stocks
-        DB_HOST: localhost
-        DB_PORT: 5432
-        SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key-for-ci' }}
-        DEBUG: 'True'
-        ALLOWED_HOSTS: 'localhost,127.0.0.1'
       run: |
         cd EX1+ADDIONS-Stocks_products
         python manage.py makemigrations --check --dry-run
         python manage.py migrate
     
-    - name: Collect static files
-      env:  # Переменные ТОЛЬКО для этого шага
-        DB_NAME: netology_stocks_products
-        DB_USER: netology_stocks
-        DB_PASSWORD: netology_stocks
-        DB_HOST: localhost
-        DB_PORT: 5432
-        SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key-for-ci' }}
-        DEBUG: 'True'
-        ALLOWED_HOSTS: 'localhost,127.0.0.1'
+    - name: Set STATIC_ROOT before collecting static files
       run: |
         cd EX1+ADDIONS-Stocks_products
-        python manage.py collectstatic --noinput --clear
+        # Временное решение: создаём settings_local.py с STATIC_ROOT
+        cat > settings_local.py << 'EOF'
+        from .settings import *
+        import os
+        
+        # Добавляем STATIC_ROOT который отсутствует в основном settings.py
+        STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+        EOF
+    
+    - name: Collect static files
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        # Используем settings_local.py который содержит STATIC_ROOT
+        python manage.py collectstatic --noinput --clear --settings=settings_local
     
     - name: Run Django tests
-      env:  # Переменные ТОЛЬКО для этого шага
-        DB_NAME: netology_stocks_products
-        DB_USER: netology_stocks
-        DB_PASSWORD: netology_stocks
-        DB_HOST: localhost
-        DB_PORT: 5432
-        SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key-for-ci' }}
-        DEBUG: 'True'
-        ALLOWED_HOSTS: 'localhost,127.0.0.1'
       run: |
         cd EX1+ADDIONS-Stocks_products
         python manage.py test --verbosity=2

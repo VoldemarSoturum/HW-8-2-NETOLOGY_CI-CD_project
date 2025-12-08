@@ -1,79 +1,151 @@
-name: Django CI/CD
+name: Django CI
 
 on:
   push:
-    branches: [ develop, main, feature/* ]
   pull_request:
-    branches: [ main, develop ]
+
+# Общие переменные окружения для всех джобов
+env:
+  SECRET_KEY: "fake-ci-secret-key"
+  DEBUG: "False"
+  ALLOWED_HOSTS: "localhost,127.0.0.1"
+
+  DB_NAME: "stocks_test_db"
+  DB_USER: "stocks_user"
+  DB_PASSWORD: "stocks_password"
+  DB_HOST: "127.0.0.1"
+  DB_PORT: "5432"
 
 jobs:
-  test:
+  # ---------------- LINT: black / flake8 / mypy ----------------
+  lint:
     runs-on: ubuntu-latest
-    
+
+    # Все команды здесь выполняются в каталоге проекта с manage.py и requirements.txt
+    defaults:
+      run:
+        working-directory: EX1+ADDIONS-Stocks_products
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"   # Django 3.2 комфортно работает с 3.10
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black flake8 mypy
+
+      - name: Run black (check)
+        run: |
+          black --check . --exclude "migrations"
+
+      - name: Run flake8
+        run: |
+          flake8 .
+
+      - name: Run mypy
+        run: |
+          mypy . --ignore-missing-imports
+
+  # ---------------- TESTS: Django + PostgreSQL ----------------
+  tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: EX1+ADDIONS-Stocks_products
+
+    # Поднимаем PostgreSQL как сервис для тестов
     services:
       postgres:
-        image: postgres:15
+        image: postgres:16
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          POSTGRES_DB: stocks_test_db
+          POSTGRES_USER: stocks_user
+          POSTGRES_PASSWORD: stocks_password
         ports:
           - 5432:5432
-    
-    env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-      SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key-for-ci' }}
-      DEBUG: 'True'
-      ALLOWED_HOSTS: 'localhost,127.0.0.1'
-    
+        options: >-
+          --health-cmd="pg_isready -U stocks_user -d stocks_test_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-    
-    - name: Install system dependencies for psycopg2
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libpq-dev gcc python3-dev
-    
-    - name: Install Python dependencies
-      run: |
-        cd EX1+ADDIONS-Stocks_products
-        pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Wait for PostgreSQL to be ready
-      run: |
-        sleep 5
-        pg_isready -h localhost -p 5432
-    
-    - name: Run database migrations
-      run: |
-        cd EX1+ADDIONS-Stocks_products
-        python manage.py makemigrations --check --dry-run
-        python manage.py migrate
-    
-    - name: Collect static files
-      run: |
-        cd EX1+ADDIONS-Stocks_products
-        python manage.py collectstatic --noinput --clear
-    
-    - name: Run Django tests
-      run: |
-        cd EX1+ADDIONS-Stocks_products
-        python manage.py test --verbosity=2
-    
-    - name: Lint with flake8
-      run: |
-        cd EX1+ADDIONS-Stocks_products
-        pip install flake8
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run migrations
+        run: |
+          python manage.py migrate --noinput
+
+      - name: Run tests
+        run: |
+          python manage.py test
+
+  # ---------------- GUNICORN: проверка запуска ----------------
+  gunicorn_check:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: EX1+ADDIONS-Stocks_products
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies + gunicorn
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install gunicorn
+
+      - name: Check gunicorn can load Django app
+        run: |
+          # Проверяем, что gunicorn может импортировать WSGI-приложение
+          gunicorn stocks_products.wsgi:application --check-config
+
+  # ---------------- NGINX: проверка конфигурации ----------------
+  nginx_check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install nginx
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
+
+      - name: Check nginx config (if present)
+        run: |
+          # Путь можно поменять под твой реальный nginx.conf
+          if [ -f deploy/nginx/nginx.conf ]; then
+            echo "Found deploy/nginx/nginx.conf, running nginx -t..."
+            sudo nginx -t -c "$PWD/deploy/nginx/nginx.conf"
+          else
+            echo "No nginx config at deploy/nginx/nginx.conf, skipping nginx check."
+          fi

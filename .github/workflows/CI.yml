@@ -1,0 +1,142 @@
+# Название workflow (отображается в интерфейсе GitHub Actions)
+name: Django CI/CD
+
+# Триггеры - когда запускать этот workflow
+on:
+  # Запускать при пуше в указанные ветки
+  push:
+    branches: [ develop, main, feature/* ]  # * - wildcard для feature веток
+  # И при создании/обновлении pull request
+  pull_request:
+    branches: [ main, develop ]
+
+# Определение jobs (заданий), которые будут выполняться
+jobs:
+  # Job с именем "test" (может быть несколько jobs)
+  test:
+    # Запускать на последней версии Ubuntu
+    runs-on: ubuntu-latest
+    
+    # Сервисы, которые нужны для этого job
+    # В данном случае - контейнер с PostgreSQL
+    services:
+      postgres:
+        # Использовать официальный образ PostgreSQL версии 15
+        image: postgres:15
+        # Переменные окружения для контейнера PostgreSQL
+        env:
+          POSTGRES_USER: postgres      # Имя пользователя
+          POSTGRES_PASSWORD: postgres  # Пароль
+          POSTGRES_DB: test_db         # Имя базы данных
+        # Опции запуска контейнера
+        options: >-
+          --health-cmd pg_isready      # Команда проверки здоровья
+          --health-interval 10s        # Проверять каждые 10 секунд
+          --health-timeout 5s          # Таймаут 5 секунд
+          --health-retries 5           # Попыток перед failure
+        # Проброс портов: хост:контейнер
+        ports:
+          - 5432:5432  # Локальный 5432 → контейнер 5432
+    
+    # Глобальные переменные окружения для всех шагов этого job
+    env:
+      # URL подключения к PostgreSQL (формат: postgres://user:pass@host:port/db)
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+      # Секретный ключ Django. Использует секрет из GitHub или fallback
+      SECRET_KEY: ${{ secrets.SECRET_KEY || 'django-insecure-test-key-for-ci' }}
+      # Режим отладки Django (True для тестов)
+      DEBUG: 'True'
+      # Разрешённые хосты для Django
+      ALLOWED_HOSTS: 'localhost,127.0.0.1'
+    
+    # Последовательность шагов (steps) для выполнения
+    steps:
+    # Шаг 1: Получение кода из репозитория
+    - name: Checkout code
+      # Использование готового действия для клонирования репо
+      uses: actions/checkout@v3
+    
+    # Шаг 2: Установка Python
+    - name: Set up Python
+      # Действие для установки Python
+      uses: actions/setup-python@v4
+      with:
+        # Конкретная версия Python
+        python-version: '3.12'
+    
+    # Шаг 3: Установка системных зависимостей
+    - name: Install system dependencies for psycopg2
+      # Команды shell для выполнения
+      run: |
+        # Обновить список пакетов Ubuntu
+        sudo apt-get update
+        # Установить необходимые пакеты:
+        # libpq-dev - библиотеки для PostgreSQL
+        # gcc - компилятор C
+        # python3-dev - заголовки Python для компиляции
+        sudo apt-get install -y libpq-dev gcc python3-dev
+    
+    # Шаг 4: Установка Python зависимостей
+    - name: Install Python dependencies
+      run: |
+        # Перейти в папку с проектом
+        cd EX1+ADDIONS-Stocks_products
+        # Обновить pip до последней версии
+        pip install --upgrade pip
+        # Установить зависимости из requirements.txt
+        pip install -r requirements.txt
+    
+    # Шаг 5: Ожидание готовности PostgreSQL
+    - name: Wait for PostgreSQL to be ready
+      run: |
+        # Подождать 5 секунд для инициализации PostgreSQL
+        sleep 5
+        # Проверить доступность PostgreSQL через утилиту pg_isready
+        pg_isready -h localhost -p 5432
+    
+    # Шаг 6: Применение миграций базы данных
+    - name: Run database migrations
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        # Проверить, нужны ли новые миграции (сухой запуск)
+        python manage.py makemigrations --check --dry-run
+        # Применить существующие миграции к базе данных
+        python manage.py migrate
+    
+    # Шаг 7: Сбор статических файлов
+    - name: Collect static files
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        # Собрать статические файлы Django:
+        # --noinput - не запрашивать подтверждение
+        # --clear - очистить папку перед сборкой
+        python manage.py collectstatic --noinput --clear
+    
+    # Шаг 8: Запуск тестов Django
+    - name: Run Django tests
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        # Запуск тестов Django:
+        # --verbosity=2 - подробный вывод
+        python manage.py test --verbosity=2
+    
+    # Шаг 9: Проверка кода линтером flake8
+    - name: Lint with flake8
+      run: |
+        cd EX1+ADDIONS-Stocks_products
+        # Установить flake8
+        pip install flake8
+        # Запустить flake8 с разными параметрами:
+        # Первая команда: проверка критических ошибок:
+        # E9 - синтаксические ошибки
+        # F63 - проблемы с логическими операторами
+        # F7 - неправильное использование синтаксиса
+        # F82 - undefined name
+        # --show-source - показывать код с ошибкой
+        # --statistics - статистика по ошибкам
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Вторая команда: общая проверка стиля
+        # --exit-zero - всегда возвращать 0 (не падать на warning)
+        # --max-complexity=10 - максимальная сложность функций
+        # --max-line-length=127 - максимальная длина строки
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics

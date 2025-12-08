@@ -21,6 +21,11 @@ jobs:
   lint:
     runs-on: ubuntu-latest
 
+    # все команды в этой джобе выполняются в каталоге проекта с manage.py и requirements.txt
+    defaults:
+      run:
+        working-directory: EX1+ADDIONS-Stocks_products
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -28,7 +33,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"   # Django 3.2 комфортно живёт с 3.10
+          python-version: "3.10"   # Django 3.2 комфортно работает с 3.10
 
       - name: Install dependencies
         run: |
@@ -51,6 +56,10 @@ jobs:
   # ---------------- TESTS: Django + PostgreSQL ----------------
   tests:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: EX1+ADDIONS-Stocks_products
 
     # поднимаем PostgreSQL как сервис для тестов
     services:
@@ -94,6 +103,10 @@ jobs:
   gunicorn_check:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: EX1+ADDIONS-Stocks_products
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -111,7 +124,7 @@ jobs:
 
       - name: Check gunicorn can load Django app
         run: |
-          # Загружаем WSGI-приложение и проверяем конфиг gunicorn
+          # Проверяем, что gunicorn может импортировать WSGI-приложение
           gunicorn stocks_products.wsgi:application --check-config
 
   # ---------------- NGINX: проверка конфигурации ----------------
@@ -129,8 +142,7 @@ jobs:
 
       - name: Check nginx config (if present)
         run: |
-          # Предполагаем, что конфиг лежит в deploy/nginx/nginx.conf
-          # Если файла нет — просто пропускаем проверку, чтобы не падать.
+          # Путь можно потом поменять под твой реальный nginx.conf
           if [ -f deploy/nginx/nginx.conf ]; then
             echo "Found deploy/nginx/nginx.conf, running nginx -t..."
             sudo nginx -t -c "$PWD/deploy/nginx/nginx.conf"

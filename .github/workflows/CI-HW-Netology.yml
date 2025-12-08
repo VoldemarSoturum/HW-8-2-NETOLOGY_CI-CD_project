@@ -16,7 +16,7 @@ jobs:
         env:
           POSTGRES_DB: netology_stocks_products
           POSTGRES_USER: netology_stocks
-          POSTGRES_PASSWORD: 666stocks_pas666  # Ваш пароль из настроек
+          POSTGRES_PASSWORD: 666stocks_pas666
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -28,6 +28,21 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+    
+    - name: Fix settings.py import issue
+      run: |
+        cd EX1+ADDIONS-Stocks_products/stocks_products
+        # Исправляем settings.py
+        # Удаляем дублирующий импорт os в конце файла
+        sed -i '/^# ===================== Настройки сбора статики/,/^MEDIA_ROOT =/ {/^import os$/d}' settings.py
+        
+        # Удаляем повторное определение BASE_DIR
+        sed -i '/^BASE_DIR = Path(__file__).resolve().parent.parent$/d' settings.py
+        
+        # Проверяем что os импортирован
+        if ! grep -q "^import os" settings.py; then
+          sed -i '2a import os' settings.py
+        fi
     
     - name: Set up Python
       uses: actions/setup-python@v4

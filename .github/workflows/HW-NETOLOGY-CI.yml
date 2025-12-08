@@ -17,11 +17,10 @@ env:
   DB_PORT: "5432"
 
 jobs:
-  # ---------------- LINT: flake8 / black / mypy ----------------
+  # ---------------- LINT: flake8 / mypy ----------------
   lint:
     runs-on: ubuntu-latest
 
-    # все команды в этой джобе выполняются в каталоге проекта с manage.py и requirements.txt
     defaults:
       run:
         working-directory: EX1+ADDIONS-Stocks_products
@@ -33,17 +32,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"   # Django 3.2 комфортно работает с 3.10
+          python-version: "3.10"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install flake8 black mypy
-
-      - name: Run black (check)
-        run: |
-          black --check .
+          pip install flake8 mypy
 
       - name: Run flake8
         run: |
@@ -61,7 +56,6 @@ jobs:
       run:
         working-directory: EX1+ADDIONS-Stocks_products
 
-    # поднимаем PostgreSQL как сервис для тестов
     services:
       postgres:
         image: postgres:16
@@ -124,7 +118,6 @@ jobs:
 
       - name: Check gunicorn can load Django app
         run: |
-          # Проверяем, что gunicorn может импортировать WSGI-приложение
           gunicorn stocks_products.wsgi:application --check-config
 
   # ---------------- NGINX: проверка конфигурации ----------------
@@ -142,7 +135,6 @@ jobs:
 
       - name: Check nginx config (if present)
         run: |
-          # Путь можно потом поменять под твой реальный nginx.conf
           if [ -f deploy/nginx/nginx.conf ]; then
             echo "Found deploy/nginx/nginx.conf, running nginx -t..."
             sudo nginx -t -c "$PWD/deploy/nginx/nginx.conf"

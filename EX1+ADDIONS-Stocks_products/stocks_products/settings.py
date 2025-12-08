@@ -168,10 +168,6 @@ REST_FRAMEWORK = {
 
 # ===================== Настройки сбора статики для CSS JS и т.п.===============
 
-
-import os
-
-
 # Базовая директория проекта
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -182,3 +178,4 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Настройки медиа файлов (если нужны)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+

@@ -1,4 +1,4 @@
-name: Django CI
+name: Add Django CI workflow with linting and testing
 
 on:
   push:

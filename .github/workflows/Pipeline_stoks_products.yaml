@@ -139,13 +139,49 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y nginx
-
-      - name: Check nginx config (if present)
+      - name: Check nginx config
         run: |
-          # Путь можно поменять под реальный nginx.conf
-          if [ -f EX1+ADDIONS-Stocks_products/deploy_nginx-conf/nginx/sites-available/stocks_product]; then
-            echo "Found EX1+ADDIONS-Stocks_products/deploy_nginx-conf/nginx/sites-available/stocks_product, running nginx -t..."
-            sudo nginx -t -c "$PWDEX1+ADDIONS-Stocks_products/deploy_nginx-conf/nginx/sites-available/stocks_product"
+          CONFIG_FILE="EX1+ADDIONS-Stocks_products/deploy_nginx-conf/nginx/sites-available/stocks_products"
+          if [ -f "$CONFIG_FILE" ]; then
+            echo "✅ Found nginx config"
+            # Создаем полный тестовый конфиг
+            TEMP_FILE="/tmp/nginx-test.conf"
+            # Создаем базовый конфиг построчно
+            echo "# === Test nginx config for CI ===" > "$TEMP_FILE"
+            echo "events {" >> "$TEMP_FILE"
+            echo "    worker_connections 1024;" >> "$TEMP_FILE"
+            echo "}" >> "$TEMP_FILE"
+            echo "" >> "$TEMP_FILE"
+            echo "http {" >> "$TEMP_FILE"
+            echo "    # Основные настройки" >> "$TEMP_FILE"
+            echo "    sendfile on;" >> "$TEMP_FILE"
+            echo "    tcp_nopush on;" >> "$TEMP_FILE"
+            echo "    tcp_nodelay on;" >> "$TEMP_FILE"
+            echo "    keepalive_timeout 65;" >> "$TEMP_FILE"
+            echo "    types_hash_max_size 2048;" >> "$TEMP_FILE"
+            echo "    include /etc/nginx/mime.types;" >> "$TEMP_FILE"
+            echo "    default_type application/octet-stream;" >> "$TEMP_FILE"
+            echo "" >> "$TEMP_FILE"
+            echo "    # Тут наш server блок" >> "$TEMP_FILE"
+            # Добавляем наш server блок
+            cat "$CONFIG_FILE" >> "$TEMP_FILE"
+            # Закрываем http блок
+            echo "" >> "$TEMP_FILE"
+            echo "}" >> "$TEMP_FILE"
+            echo "🔍 Testing configuration..."
+            sudo nginx -t -c "$TEMP_FILE"
+            if [ $? -eq 0 ]; then
+              echo "✅ Nginx configuration is valid!"
+              echo "📋 Preview of test config (first 30 lines):"
+              head -30 "$TEMP_FILE"
+            else
+              echo "❌ Nginx configuration has errors"
+              echo "📋 Error output above"
+            fi
+            # Очистка
+            rm -f "$TEMP_FILE"
           else
-            echo "No nginx config at EX1+ADDIONS-Stocks_products/deploy_nginx-conf/nginx/sites-available/stocks_product, skipping nginx check."
+            echo "❌ Nginx config not found at: $CONFIG_FILE"
+            echo "📁 Available files in directory:"
+            ls -la "EX1+ADDIONS-Stocks_products/deploy_nginx-conf/nginx/sites-available/" 2>/dev/null || echo "Directory not found"
           fi

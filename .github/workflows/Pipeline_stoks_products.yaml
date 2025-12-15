@@ -142,10 +142,10 @@ jobs:
 
       - name: Check nginx config (if present)
         run: |
-          # Путь можно поменять под твой реальный nginx.conf
-          if [ -f deploy_nginx-conf/nginx/sites-available/stocks_product.conf ]; then
-            echo "Found deploy_nginx-conf/nginx/sites-available/stocks_product.conf, running nginx -t..."
-            sudo nginx -t -c "$PWD/deploy_nginx-conf/nginx/sites-available/stocks_product.conf"
+          # Путь можно поменять под реальный nginx.conf
+          if [ -f EX1+ADDIONS-Stocks_products/deploy_nginx-conf/nginx/sites-available/stocks_product]; then
+            echo "Found EX1+ADDIONS-Stocks_products/deploy_nginx-conf/nginx/sites-available/stocks_product, running nginx -t..."
+            sudo nginx -t -c "$PWDEX1+ADDIONS-Stocks_products/deploy_nginx-conf/nginx/sites-available/stocks_product"
           else
-            echo "No nginx config at deploy_nginx-conf/nginx/sites-available/stocks_product.conf, skipping nginx check."
+            echo "No nginx config at EX1+ADDIONS-Stocks_products/deploy_nginx-conf/nginx/sites-available/stocks_product, skipping nginx check."
           fi
